@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#sudo apt install lshw
+#sudo apt install dmidecode hdparm nvme-cli
 
 # read-edid is supplied in this script directory
 cd `dirname "$BASH_SOURCE"`
@@ -33,16 +33,80 @@ printf '\n' >> $file
 echo $PRETTY_NAME >> $file
 
 printf '\n' >> $file
-echo ===\| General HW \|=== >> $file
+echo ===\| Motherboard \|=== >> $file
 printf '\n' >> $file
 
-lshw -short >> $file
+dmidecode --type baseboard | tail -n +5 >> $file
 
-# lshw does not currently list the nvme drives, so dump the storage info with lsblk
 printf '\n' >> $file
-echo ===\| DISK LAYOUT \(and nvme info\)  \|=== >> $file
+echo ===\| CPU \|=== >> $file
 printf '\n' >> $file
-lsblk -o NAME,FSTYPE,LABEL,MOUNTPOINT,SIZE,MODEL >> $file
+
+dmidecode --type processor | tail -n +5 >> $file
+
+printf '\n' >> $file
+echo ===\| RAM \|=== >> $file
+printf '\n' >> $file
+
+dmidecode --type memory | tail -n +5 >> $file
+
+printf '\n' >> $file
+echo ===\| GPU \|=== >> $file
+printf '\n' >> $file
+
+
+#Taken from neofetch
+gpu_cmd="$(lspci -mm | awk -F '\"|\" \"|\\(' \
+                                          '/"Display|"3D|"VGA/ {a[$0] = $1 " | " $3 " | " $4}
+                                           END {for(i in a) {if(!seen[a[i]]++) print a[i]}}')"
+
+nr_of_gpus=0
+
+while IFS= read -r gpu
+do
+  ((nr_of_gpus=nr_of_gpus+1))
+  IFS='|' read -ra gpu_data <<< "$gpu"
+
+  #Trim whitespace on pcibus
+  pcibus=$(echo ${gpu_data[0]} | xargs)
+
+  echo On pci bus: $pcibus >> $file
+  echo Vendor: ${gpu_data[1]} >> $file
+
+  if [[ ${gpu_data[1]} == *"nvidia"* ]]; then
+    #Nvidia cards
+    cat /proc/driver/nvidia/gpus/0000\:$pcibus/information | grep 'Model:\|UUID:'
+  else
+    #AMD/Intel
+    echo Model: ${gpu_data[2]} >> $file
+    uuid=$(cat /sys/bus/pci/devices/0000\:$pcibus/unique_id)
+    echo UUID: $uuid >> $file
+  fi
+
+  echo "---" >> $file
+done <<< "$gpu_cmd"
+
+printf '\n' >> $file
+echo ===\| HDD \|=== >> $file
+printf '\n' >> $file
+
+for hdd in /dev/sd*[a-z]
+do
+  echo $hdd >> $file
+  hdparm -I $hdd | grep 'Model Number:\|Serial Number:\|Firmware Revision:\|device size with M = 1000\*1000:\|Form Factor:\|Nominal Media Rotation Rate:' >> $file
+done
+
+printf '\n' >> $file
+echo ===\| NVME \|=== >> $file
+printf '\n' >> $file
+
+nvme list >> $file
+
+printf '\n' >> $file
+echo ===\| Input devices \|=== >> $file
+printf '\n' >> $file
+
+cat /proc/bus/input/devices >> $file
 
 printf '\n' >> $file
 echo ===\| Monitor info \|=== >> $file
