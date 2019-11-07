@@ -48,7 +48,7 @@ def cpu_parse(f, output_data):
 
     prev_line_empty = False
 
-    cpu_keys = ["Socket Designation:", "Type:", "Manufacturer:", "ID:", "Version:", "Current Speed:"]
+    cpu_keys = ["Socket Designation:", "Type:", "Manufacturer:", "ID:", "Version:", "Current Speed:", "Thread Count:"]
 
     while True:
         out = f.readline()
@@ -103,7 +103,13 @@ def ram_parse(f, output_data):
                 out = out.split(":")
                 ram_stick[out[0].strip()] = out[1].strip()
                 if (out[0].strip() == "Size"):
-                    total_mem = total_mem + int(out[1].split()[0])
+                    mem = out[1].split()[0]
+                    if (not mem.isdigit()):
+                        #This slot is not populated
+                        section_type = -1
+                        ram_stick.clear()
+                        continue
+                    total_mem = total_mem + int(mem)
         else:
             prev_line_empty = False
             if ("DMI type 16" in out):
