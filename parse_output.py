@@ -26,7 +26,7 @@ def mobo_parse(f, output_data):
         if len(out.split()) == 0:
             section_type = -1
             if prev_line_empty:
-                #End of RAM section
+                #End of MOBO section
                 break
             prev_line_empty = True
         elif section_type == 2:
@@ -49,7 +49,7 @@ def cpu_parse(f, output_data):
 
     prev_line_empty = False
 
-    cpu_keys = ["Socket Designation:", "Type:", "Manufacturer:", "ID:", "Version:", "Current Speed:", "Thread Count:"]
+    cpu_keys = ["Socket Designation:", "Type:", "Manufacturer:", "ID:", "Version:", "Current Speed:", "Thread Count:", "Upgrade:"]
 
     while True:
         out = f.readline()
@@ -98,7 +98,17 @@ def ram_parse(f, output_data):
         elif section_type == 16:
             if any(keyword in out for keyword in sec16_keys):
                 out = out.split(":")
-                ram_data[out[0].strip()] = out[1].strip()
+                label = out[0].strip()
+                if label in ram_data:
+                    #Add the quantities together
+                    old_data = int(ram_data[label].split()[0])
+                    new_data = out[1].split()
+                    new_data[0] = str( int(new_data[0]) + old_data )
+
+                    new_data = " ".join(new_data)
+                    ram_data[label] = new_data
+                else:
+                    ram_data[label] = out[1].strip()
         elif section_type == 17:
             if any(keyword in out for keyword in sec17_keys):
                 out = out.split(":")

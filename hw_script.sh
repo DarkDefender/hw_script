@@ -77,10 +77,15 @@ do
     #Nvidia cards
     cat /proc/driver/nvidia/gpus/0000\:$pcibus/information | grep 'Model:\|UUID:' >> $file
   else
-    #AMD/Intel
+    #Other
     echo Model: ${gpu_data[2]} >> $file
-    uuid=$(cat /sys/bus/pci/devices/0000\:$pcibus/unique_id)
-    echo UUID: $uuid >> $file
+
+    uuid_file=/sys/bus/pci/devices/0000\:$pcibus/unique_id
+
+    if [ -e $uuid_file ]; then
+      uuid=$(cat $uuid_file)
+      echo UUID: $uuid >> $file
+    fi
   fi
 
   echo "---" >> $file
