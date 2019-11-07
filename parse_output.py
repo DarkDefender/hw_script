@@ -4,6 +4,7 @@ import json
 import sys
 import os
 import re
+import math
 
 def os_parse(f, output_data):
     f.readline() #Skip blank line
@@ -22,19 +23,19 @@ def mobo_parse(f, output_data):
 
     while True:
         out = f.readline()
-        if (len(out.split()) == 0):
+        if len(out.split()) == 0:
             section_type = -1
             if prev_line_empty:
                 #End of RAM section
                 break
             prev_line_empty = True
-        elif (section_type == 2):
+        elif section_type == 2:
             if any(keyword in out for keyword in sec2_keys):
                 out = out.split(":")
                 mobo_data[out[0].strip()] = out[1].strip()
         else:
             prev_line_empty = False
-            if ("DMI type 2" in out):
+            if "DMI type 2" in out:
                 section_type = 2
 
     output_data["Motherboard"] = mobo_data
@@ -52,12 +53,12 @@ def cpu_parse(f, output_data):
 
     while True:
         out = f.readline()
-        if (len(out.split()) == 0):
+        if len(out.split()) == 0:
             if prev_line_empty:
                 #End of CPU section
                 break
             prev_line_empty = True
-            if (len(cpu_data) != 0):
+            if len(cpu_data) != 0:
                 cpus.append(cpu_data)
                 cpu_data = dict()
         elif any(keyword in out for keyword in cpu_keys):
@@ -85,26 +86,26 @@ def ram_parse(f, output_data):
 
     while True:
         out = f.readline()
-        if (len(out.split()) == 0):
+        if len(out.split()) == 0:
             section_type = -1
             if prev_line_empty:
                 #End of RAM section
                 break
             prev_line_empty = True
-            if (len(ram_stick) != 0):
+            if len(ram_stick) != 0:
                 ram_sticks.append(ram_stick)
                 ram_stick = dict()
-        elif (section_type == 16):
+        elif section_type == 16:
             if any(keyword in out for keyword in sec16_keys):
                 out = out.split(":")
                 ram_data[out[0].strip()] = out[1].strip()
-        elif (section_type == 17):
+        elif section_type == 17:
             if any(keyword in out for keyword in sec17_keys):
                 out = out.split(":")
                 ram_stick[out[0].strip()] = out[1].strip()
-                if (out[0].strip() == "Size"):
+                if out[0].strip() == "Size":
                     mem = out[1].split()[0]
-                    if (not mem.isdigit()):
+                    if not mem.isdigit():
                         #This slot is not populated
                         section_type = -1
                         ram_stick.clear()
@@ -112,9 +113,9 @@ def ram_parse(f, output_data):
                     total_mem = total_mem + int(mem)
         else:
             prev_line_empty = False
-            if ("DMI type 16" in out):
+            if "DMI type 16" in out:
                 section_type = 16
-            elif ("DMI type 17" in out):
+            elif "DMI type 17" in out:
                 section_type = 17
 
     ram_data["Total RAM (GB)"] = total_mem / 1024
@@ -130,15 +131,15 @@ def gpu_parse(f, output_data):
 
     while True:
         out = f.readline()
-        if (len(out.split()) == 0):
+        if len(out.split()) == 0:
             #End of GPU section
             break
-        elif (out[0:3] == "---"):
+        elif out[0:3] == "---":
             gpus.append(info)
             info = dict()
         else:
             data = out.split(":")
-            if (len(data) == 2):
+            if len(data) == 2:
                 info[data[0]] = data[1].strip()
             else:
                 #we need to stitch together the data string again
@@ -158,12 +159,12 @@ def disk_parse(f, output_data):
     #HDDs
     while True:
         out = f.readline()
-        if (len(out.split()) == 0):
+        if len(out.split()) == 0:
             #End of HDD section
             if has_drive:
                 drives.append(info)
             break
-        if (out[0] == "/"):
+        if out[0] == "/":
             if has_drive:
                 drives.append(info)
                 info = dict()
@@ -172,6 +173,15 @@ def disk_parse(f, output_data):
             has_drive = True
         else:
             data = out.split(":")
+            if data[0] == "device size with M = 1000*1000":
+                #Check if this is a empty disk (probably disconnected)
+                data_size = int(data[1].split()[0])
+                if data_size == 0:
+                    #Throw away the data
+                    has_drive = False
+                    info = dict()
+                    info["Type"] = "HDD"
+
             info[data[0].strip()] = data[1].strip()
 
     output_data["HDDs"] = drives
@@ -195,7 +205,7 @@ def nvme_parse(f, output_data):
     #HDDs
     while True:
         out = f.readline()
-        if (len(out.split()) == 0):
+        if len(out.split()) == 0:
             #End of NVME section
             break
         else:
@@ -222,19 +232,19 @@ def input_parse(f, output_data):
 
     while True:
         out = f.readline()
-        if (len(out.split()) == 0):
+        if len(out.split()) == 0:
             if prev_line_empty:
                 #End of input section
                 break
             prev_line_empty = True
             in_section = False
-        elif (out[0] == "I"):
+        elif out[0] == "I":
             prev_line_empty = False
             vendor = out.split()[2].split("=")[1]
             product = out.split()[3].split("=")[1]
-            if (vendor in vendor_black_list):
+            if vendor in vendor_black_list:
                 continue
-            elif (vendor in found_devs and found_devs[vendor] == product):
+            elif vendor in found_devs and found_devs[vendor] == product:
                 continue
             found_devs[vendor] = product
             in_section = True
@@ -253,16 +263,16 @@ def monitor_parse(f, output_data):
     modes = list()
     for line in f:
         out = line.split()
-        if (len(out) == 0):
+        if len(out) == 0:
             continue
 
-        if (out[0] == "Section"):
+        if out[0] == "Section":
             in_section = True
             continue
-        if (out[0] == "EndSection"):
+        if out[0] == "EndSection":
             str_len = len(native_mode)
 
-            if (str_len == 0):
+            if str_len == 0:
                 #Just pick the first mode
                 res_data = modes[0][8:].split()
                 try:
@@ -279,7 +289,7 @@ def monitor_parse(f, output_data):
             #Workaround for crappy displays that lists modes without any info
             fallback_mode = False #Try to fallback to the first valid mode
             for mode in modes:
-                if (fallback_mode or native_mode == mode[:str_len]):
+                if fallback_mode or native_mode == mode[:str_len]:
                     res_data = mode[str_len:].split()
                     try:
                         mon_info["Native Resolution"] = res_data[1] + "x" + res_data[5]
@@ -296,26 +306,32 @@ def monitor_parse(f, output_data):
             native_mode = ""
             continue
 
-        if (not in_section):
+        if not in_section:
             #The card and output port
             mon_info["Connector"] = out[0]
         else:
-            if (out[0] == "ModelName"):
+            if out[0] == "ModelName":
                 mon_info["Model"] = " ".join(out[1:]).strip('"')
-            elif (out[0] == "VendorName"):
+            elif out[0] == "VendorName":
                 mon_info["Vendor"] = " ".join(out[1:]).strip('"')
-            elif (out[0] == "Modeline"):
+            elif out[0] == "Modeline":
                 modes.append( " ".join(out[1:]) )
-            elif (out[0] == "Option" and out[1] == '"PreferredMode"'):
+            elif out[0] == "Option" and out[1] == '"PreferredMode"':
                 native_mode = " ".join(out[2:])
-            elif (out[0] == "VertRefresh"):
+            elif out[0] == "VertRefresh":
                 mon_info["Refresh Rate"] = out[1]
-            elif ("Monitor Manufactured" in line):
+            elif out[0] == "DisplaySize":
+                v_size = int(out[1])
+                h_size = int(out[2])
+                inch = math.sqrt(v_size ** 2 + h_size ** 2) / 25.4
+                mon_info["Display Dimentions (mm)"] = [v_size, h_size]
+                mon_info["Display Size (inch)"] = inch
+            elif "Monitor Manufactured" in line:
                 mon_info["Manufacture date"] = line[24:-1]
-            elif ("Serial Number" in line):
+            elif "Serial Number" in line:
                 mon_info["Serial Number"] = line[17:-1].strip('"')
 
-    if (in_section):
+    if in_section:
         #Something is wrong, this shouldn't happen
         output_data["Monitors"] = "Error parsing monitor data, check input file"
     else:
@@ -323,7 +339,7 @@ def monitor_parse(f, output_data):
 
 #Main section start
 
-if (len(sys.argv) < 3):
+if len(sys.argv) < 3:
     print("You need to provide a file to parse and output directory!")
     sys.exit()
 
@@ -346,36 +362,36 @@ for input_file in sys.argv[1:-1]:
 
     for line in f:
         line_parse = line.split("|")
-        if (len(line_parse) != 3):
+        if len(line_parse) != 3:
             #Not a section line
             continue
 
         line_parse = line_parse[1]
-        if (line_parse == " OS "):
+        if line_parse == " OS ":
             #===| OS |===
             os_parse(f, output_data)
-        elif (line_parse == " Motherboard "):
+        elif line_parse == " Motherboard ":
             #===| Motherboard |===
             mobo_parse(f, output_data)
-        elif (line_parse == " CPU "):
+        elif line_parse == " CPU ":
             #===| CPU |===
             cpu_parse(f, output_data)
-        elif (line_parse == " RAM "):
+        elif line_parse == " RAM ":
             #===| RAM |===
             ram_parse(f, output_data)
-        elif (line_parse == " GPU "):
+        elif line_parse == " GPU ":
             #===| GPU |===
             gpu_parse(f, output_data)
-        elif (line_parse == " HDD "):
+        elif line_parse == " HDD ":
             #===| HDD |===
             disk_parse(f, output_data)
-        elif (line_parse == " NVME "):
+        elif line_parse == " NVME ":
             #===| NVME |===
             nvme_parse(f, output_data)
-        elif (line_parse == " Input devices "):
+        elif line_parse == " Input devices ":
             #===| Input devices |===
             input_parse(f, output_data)
-        elif (line_parse == " Monitor info "):
+        elif line_parse == " Monitor info ":
             #===| Monitor info |===
             monitor_parse(f, output_data)
         else:

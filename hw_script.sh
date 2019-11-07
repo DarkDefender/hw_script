@@ -90,7 +90,7 @@ printf '\n' >> $file
 echo ===\| HDD \|=== >> $file
 printf '\n' >> $file
 
-if [ -f /dev/sda ]; then
+if [ -b /dev/sda ]; then
   for hdd in /dev/sd*[a-z]
   do
     echo $hdd >> $file
