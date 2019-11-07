@@ -73,9 +73,9 @@ do
   echo On pci bus: $pcibus >> $file
   echo Vendor: ${gpu_data[1]} >> $file
 
-  if [[ ${gpu_data[1]} == *"nvidia"* ]]; then
+  if [[ ${gpu_data[1]} == *"NVIDIA"* ]]; then
     #Nvidia cards
-    cat /proc/driver/nvidia/gpus/0000\:$pcibus/information | grep 'Model:\|UUID:'
+    cat /proc/driver/nvidia/gpus/0000\:$pcibus/information | grep 'Model:\|UUID:' >> $file
   else
     #AMD/Intel
     echo Model: ${gpu_data[2]} >> $file
@@ -90,11 +90,13 @@ printf '\n' >> $file
 echo ===\| HDD \|=== >> $file
 printf '\n' >> $file
 
-for hdd in /dev/sd*[a-z]
-do
-  echo $hdd >> $file
-  hdparm -I $hdd | grep 'Model Number:\|Serial Number:\|Firmware Revision:\|device size with M = 1000\*1000:\|Form Factor:\|Nominal Media Rotation Rate:' >> $file
-done
+if [ -f /dev/sda ]; then
+  for hdd in /dev/sd*[a-z]
+  do
+    echo $hdd >> $file
+    hdparm -I $hdd | grep 'Model Number:\|Serial Number:\|Firmware Revision:\|device size with M = 1000\*1000:\|Form Factor:\|Nominal Media Rotation Rate:' >> $file
+  done
+fi
 
 printf '\n' >> $file
 echo ===\| NVME \|=== >> $file
