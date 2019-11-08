@@ -2,6 +2,12 @@
 
 #sudo apt install dmidecode hdparm nvme-cli
 
+#Check if the required commands exist
+
+command -v dmidecode >/dev/null 2>&1 || { echo >&2 "I require dmidecode but it's not installed.  Aborting."; exit 1; }
+command -v hdparm >/dev/null 2>&1 || { echo >&2 "I require hdparm but it's not installed.  Aborting."; exit 1; }
+command -v nvme >/dev/null 2>&1 || { echo >&2 "I require nvme-cli but it's not installed.  Aborting."; exit 1; }
+
 # read-edid is supplied in this script directory
 cd `dirname "$BASH_SOURCE"`
 
