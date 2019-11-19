@@ -145,10 +145,17 @@ def gpu_parse(f, output_data):
             #End of GPU section
             break
         elif out[0:3] == "---":
-            gpus.append(info)
+            if "UUID" in info:
+                #Only save GPUs with UUIDs
+                gpus.append(info)
             info = dict()
         else:
             data = out.split(":")
+
+            if data[0] == "GPU UUID":
+                #Nvidia cards
+                data[0] = "UUID"
+
             if len(data) == 2:
                 info[data[0]] = data[1].strip()
             else:
