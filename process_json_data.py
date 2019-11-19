@@ -174,6 +174,15 @@ for keyword in new_unused_hw:
 for key, entry in database["HW"]["used"].items():
     new_used_hw[key] += entry
 
+# Cleanup unused entries in the used/unused categories (warpped in list to be able to delete in the for loop)
+for keyword in list(new_unused_hw):
+    if len(new_unused_hw[keyword]) == 0:
+        del new_unused_hw[keyword]
+
+for keyword in list(new_used_hw):
+    if len(new_used_hw[keyword]) == 0:
+        del new_used_hw[keyword]
+
 #Remove unused hw from the used dict. (and remove computer serial numbers from them)
 for keyword in new_unused_hw:
     for entry in new_unused_hw[keyword]:
