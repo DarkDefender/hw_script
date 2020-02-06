@@ -6,6 +6,8 @@ import os
 import re
 import math
 
+brief_output = True
+
 def os_parse(f, output_data):
     f.readline() #Skip blank line
     output_data["OS"] = f.readline()[:-1] #skip newline
@@ -49,7 +51,10 @@ def cpu_parse(f, output_data):
 
     prev_line_empty = False
 
-    cpu_keys = ["Socket Designation:", "Type:", "Manufacturer:", "ID:", "Version:", "Current Speed:", "Thread Count:", "Upgrade:"]
+    if brief_output:
+        cpu_keys = ["Version:"]
+    else:
+        cpu_keys = ["Socket Designation:", "Type:", "Manufacturer:", "ID:", "Version:", "Current Speed:", "Thread Count:", "Upgrade:"]
 
     while True:
         out = f.readline()
@@ -128,8 +133,12 @@ def ram_parse(f, output_data):
             elif "DMI type 17" in out:
                 section_type = 17
 
+    if brief_output:
+        ram_data.clear()
+    else:
+        ram_data["Sticks"] = ram_sticks
+
     ram_data["Total RAM (GB)"] = total_mem / 1024
-    ram_data["Sticks"] = ram_sticks
     output_data["RAM"] = ram_data
 
 def gpu_parse(f, output_data):
@@ -147,6 +156,11 @@ def gpu_parse(f, output_data):
         elif out[0:3] == "---":
             if "UUID" in info:
                 #Only save GPUs with UUIDs
+                if brief_output:
+                    new_info = dict()
+                    new_info["Vendor"] = info["Vendor"]
+                    new_info["Model"] = info["Model"]
+                    info = new_info
                 gpus.append(info)
             info = dict()
         else:
@@ -287,6 +301,11 @@ def monitor_parse(f, output_data):
             in_section = True
             continue
         if out[0] == "EndSection":
+            if brief_output:
+                mon_info_new = dict()
+                mon_info_new["Display Size (inch)"] = mon_info["Display Size (inch)"]
+                mon_info = mon_info_new
+
             str_len = len(native_mode)
 
             if str_len == 0:
@@ -368,7 +387,8 @@ for input_file in sys.argv[1:-1]:
         f= open(input_file,"r")
     except:
         print("Couldn't open file " + input_file + " for reading")
-        sys.exit()
+        continue
+        #sys.exit()
 
     output_data = dict()
 
@@ -386,9 +406,13 @@ for input_file in sys.argv[1:-1]:
         line_parse = line_parse[1]
         if line_parse == " OS ":
             #===| OS |===
+            if brief_output:
+                continue
             os_parse(f, output_data)
         elif line_parse == " Motherboard ":
             #===| Motherboard |===
+            if brief_output:
+                continue
             mobo_parse(f, output_data)
         elif line_parse == " CPU ":
             #===| CPU |===
@@ -401,12 +425,18 @@ for input_file in sys.argv[1:-1]:
             gpu_parse(f, output_data)
         elif line_parse == " HDD ":
             #===| HDD |===
+            if brief_output:
+                continue
             disk_parse(f, output_data)
         elif line_parse == " NVME ":
             #===| NVME |===
+            if brief_output:
+                continue
             nvme_parse(f, output_data)
         elif line_parse == " Input devices ":
             #===| Input devices |===
+            if brief_output:
+                continue
             input_parse(f, output_data)
         elif line_parse == " Monitor info ":
             #===| Monitor info |===
@@ -418,7 +448,7 @@ for input_file in sys.argv[1:-1]:
     #convert to json
     out_json = json.dumps(output_data)
     try:
-        f_out = open(out_dir + filename + ".json","w+")
+        f_out = open(out_dir + filename + ".json","w")
     except:
         print("Couldn't open file " + input_file + " for writing")
         sys.exit()
