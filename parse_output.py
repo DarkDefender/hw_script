@@ -3,14 +3,30 @@
 import json
 import sys
 import os
-import re
 import math
 
-brief_output = True
+brief_output = False
 
 def os_parse(f, output_data):
     f.readline() #Skip blank line
     output_data["OS"] = f.readline()[:-1] #skip newline
+
+def net_parse(f, output_data):
+    f.readline() #Skip blank line
+
+    net_data = []
+
+    while True:
+        out = f.readline()
+        out = out.split()
+        if len(out) == 0:
+            #End of NET section
+            break
+        else:
+            #Add mac adresses
+            net_data.append(out[1])
+
+    output_data["Network"] = net_data
 
 def mobo_parse(f, output_data):
     #Skip the first line
@@ -409,6 +425,8 @@ for input_file in sys.argv[1:-1]:
             if brief_output:
                 continue
             os_parse(f, output_data)
+        elif line_parse == " Network ":
+            net_parse(f, output_data)
         elif line_parse == " Motherboard ":
             #===| Motherboard |===
             if brief_output:

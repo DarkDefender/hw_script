@@ -39,6 +39,12 @@ printf '\n' >> $file
 echo $PRETTY_NAME >> $file
 
 printf '\n' >> $file
+echo ===\| Network \|=== >> $file
+printf '\n' >> $file
+
+ip link show | grep link/ether >> $file
+
+printf '\n' >> $file
 echo ===\| Motherboard \|=== >> $file
 printf '\n' >> $file
 
