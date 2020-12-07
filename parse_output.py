@@ -141,7 +141,16 @@ def ram_parse(f, output_data):
                         section_type = -1
                         ram_stick.clear()
                         continue
-                    total_mem = total_mem + int(mem)
+                    unit_size = out[1].split()[1]
+                    #Convert to GB
+                    if (unit_size == "MB"):
+                        mem = int(mem) / 1024
+                    elif (unit_size == "TB"):
+                        mem = int(mem) * 1024
+                    else:
+                        mem = int(mem)
+
+                    total_mem = total_mem + mem
         else:
             prev_line_empty = False
             if "DMI type 16" in out:
@@ -154,7 +163,7 @@ def ram_parse(f, output_data):
     else:
         ram_data["Sticks"] = ram_sticks
 
-    ram_data["Total RAM (GB)"] = total_mem / 1024
+    ram_data["Total RAM (GB)"] = total_mem
     output_data["RAM"] = ram_data
 
 def gpu_parse(f, output_data):
@@ -170,14 +179,14 @@ def gpu_parse(f, output_data):
             #End of GPU section
             break
         elif out[0:3] == "---":
-            if "UUID" in info:
-                #Only save GPUs with UUIDs
-                if brief_output:
-                    new_info = dict()
-                    new_info["Vendor"] = info["Vendor"]
-                    new_info["Model"] = info["Model"]
-                    info = new_info
-                gpus.append(info)
+            #if "UUID" in info:
+            #Only save GPUs with UUIDs
+            if brief_output:
+                new_info = dict()
+                new_info["Vendor"] = info["Vendor"]
+                new_info["Model"] = info["Model"]
+                info = new_info
+            gpus.append(info)
             info = dict()
         else:
             data = out.split(":")
