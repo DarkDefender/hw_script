@@ -179,15 +179,15 @@ def gpu_parse(f, output_data):
             #End of GPU section
             break
         elif out[0:3] == "---":
-            #if "UUID" in info:
-            #Only save GPUs with UUIDs
-            if brief_output:
-                new_info = dict()
-                new_info["Vendor"] = info["Vendor"]
-                new_info["Model"] = info["Model"]
-                info = new_info
-            gpus.append(info)
-            info = dict()
+            if "NVIDIA" in info["Vendor"] or "AMD" in info["Vendor"]:
+               #Only save GPUs from Nvidia and AMD
+                if brief_output:
+                    new_info = dict()
+                    new_info["Vendor"] = info["Vendor"]
+                    new_info["Model"] = info["Model"]
+                    info = new_info
+                gpus.append(info)
+                info = dict()
         else:
             data = out.split(":")
 

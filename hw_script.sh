@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# We require root to extract certain information.
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root"
+   exit 1
+fi
+
 #sudo apt install dmidecode hdparm nvme-cli
 
 #Check if the required commands exist
