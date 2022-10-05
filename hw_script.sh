@@ -137,26 +137,6 @@ printf '\n' >> $file
 echo ===\| Monitor info \|=== >> $file
 printf '\n' >> $file
 
-# Are we on a computer with closed source nvidia drivers?
-# Not fail safe, but should be good enough of a check
-if [ -x "$(command -v nvidia-settings)" ]
-then
-  #Split out edid info from xrandr
-  cd /tmp/
-  xrandr --listmonitors --verbose | awk '/EDID/{x="F"++i;}{print > /tmp/x;}'
-  cd -
-
-  for edid_file in /tmp/0F*
-  do
-    sed -n -i'' '/EDID:/,/BorderDimensions:/{//!p}' $edid_file
-    tr -d "[:space:]" < $edid_file > /tmp/tmp_data
-    xxd -r -p /tmp/tmp_data $edid_file
-    ./parse-edid < $edid_file >> $file
-  done
-
-  exit 0
-fi
-
 MONITOR_OUTPUTS=/sys/class/drm/card*-*
 for output in $MONITOR_OUTPUTS
 do
