@@ -14,19 +14,39 @@ def os_parse(f, output_data):
 def net_parse(f, output_data):
     f.readline() #Skip blank line
 
-    net_data = []
+    net_ifaces = list()
+    net_data = dict()
+
+    prev_line_empty = False
+    entry = 0
+
+    net_entries = ["Interface", "MAC", "IP", "PCI address", "Type", "Manufacturer", "Product Name"]
+    brief_entries = [1,2]
 
     while True:
         out = f.readline()
-        out = out.split()
-        if len(out) == 0:
-            #End of NET section
-            break
-        else:
-            #Add mac adresses
-            net_data.append(out[1])
+        if len(out.split()) == 0:
+            section_type = -1
+            if prev_line_empty:
+                #End of net section
+                break
+            net_ifaces.append(net_data)
+            net_data = dict()
 
-    output_data["Network"] = net_data
+            prev_line_empty = True
+            entry = 0
+        else:
+            prev_line_empty = False
+            if brief_output and entry not in brief_entries:
+                entry += 1
+                continue
+            if len(net_entries) <= entry:
+                continue
+            # Add entry to dict
+            net_data[net_entries[entry]] = out.strip()
+            entry += 1
+
+    output_data["Network"] = net_ifaces
 
 def mobo_parse(f, output_data):
     #Skip the first line

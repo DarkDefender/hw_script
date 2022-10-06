@@ -48,7 +48,26 @@ printf '\n' >> $file
 echo ===\| Network \|=== >> $file
 printf '\n' >> $file
 
-ip link show | grep link/ether >> $file
+for iface in /sys/class/net/*
+do
+  if [ -f "$iface/device/uevent" ]; then
+    # This is a non virtual device, save information about it
+    echo ${iface##*/} >> $file
+    # Get mac adress
+    cat "$iface/address" >> $file
+    # Get ip adress
+    if grep -q up "$iface/operstate"; then
+      ifconfig ${iface##*/} | grep "inet " | awk '{print $2}' >> $file
+    else
+      echo DOWN >> $file
+    fi
+    # Get the device pci bus address
+    pci_addr=$(cat "$iface/device/uevent" | grep -Po 'PCI_SLOT_NAME=\K.*')
+    # Dump device model name and extra info
+    lspci -mm -s $pci_addr | xargs -n 1 printf "%s\n" >> $file
+    printf '\n' >> $file
+  fi
+done
 
 printf '\n' >> $file
 echo ===\| Motherboard \|=== >> $file
