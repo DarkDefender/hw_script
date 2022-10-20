@@ -13,6 +13,7 @@ missing_command=false
 command -v dmidecode >/dev/null 2>&1 || { echo >&2 "I require 'dmidecode' but it's not installed.  Aborting."; missing_command=true; }
 command -v hdparm >/dev/null 2>&1 || { echo >&2 "I require 'hdparm' but it's not installed.  Aborting."; missing_command=true; }
 command -v nvme >/dev/null 2>&1 || { echo >&2 "I require 'nvme-cli' but it's not installed.  Aborting."; missing_command=true; }
+command -v edid-decode >/dev/null 2>&1 || { echo >&2 "I require 'edid-decode' but it's not installed.  Aborting."; missing_command=true; }
 
 if [ "$missing_command" = true ] ; then
   exit 1
@@ -169,8 +170,23 @@ do
     #Print the card and output port
     basename $output >> $file
     printf '\n' >> $file
-    #Print the monitor info
-    ./parse-edid < $output/edid >> $file
+    #Print relevant monitor info
+    # awk '{$1=$1};1' trims whitespace in the output
+    edid_output=$(edid-decode -sn $output/edid | awk '{$1=$1};1')
+
+    echo Section >> $file
+    # Both name and serial number
+    echo "$edid_output" | grep "Display Product" >> $file
+    echo "$edid_output" | grep "Manufacturer" >> $file
+    # Manufacturing date
+    echo "$edid_output" | grep "Made in" >> $file
+    echo "$edid_output" | grep "Maximum image size" >> $file
+    echo "$edid_output" | grep "Bits per primary color channel" >> $file
+    echo "$edid_output" | grep "Supported color formats" >> $file
+    echo "$edid_output" | grep "Monitor ranges" >> $file
+    # Native resolution
+    echo Native Video Resolution: $(echo "$edid_output" | tail -n1) >> $file
+    echo EndSection >> $file
     printf '\n' >> $file
   fi
 done

@@ -335,12 +335,13 @@ def monitor_parse(f, output_data):
     in_section = False
     mon_info_list = list()
     mon_info = dict()
-    native_mode = '"Mode 0"' #The native resolution monitor mode
-    modes = list()
+
     for line in f:
-        out = line.split()
+        out = line.strip()
         if len(out) == 0:
             continue
+
+        out = out.split(":")
 
         if out[0] == "Section":
             in_section = True
@@ -351,66 +352,40 @@ def monitor_parse(f, output_data):
                 mon_info_new["Display Size (inch)"] = mon_info["Display Size (inch)"]
                 mon_info = mon_info_new
 
-            str_len = len(native_mode)
-
-            if str_len == 0:
-                #Just pick the first mode
-                res_data = modes[0][8:].split()
-                try:
-                    mon_info["Native Resolution"] = res_data[1] + "x" + res_data[5]
-                except:
-                    pass
-                in_section = False
-                mon_info_list.append(mon_info)
-                mon_info = dict()
-                modes = list()
-                native_mode = ""
-                continue
-
-            #Workaround for crappy displays that lists modes without any info
-            fallback_mode = False #Try to fallback to the first valid mode
-            for mode in modes:
-                if fallback_mode or native_mode == mode[:str_len]:
-                    res_data = mode[str_len:].split()
-                    try:
-                        mon_info["Native Resolution"] = res_data[1] + "x" + res_data[5]
-                    except:
-                        fallback_mode = True
-                        str_len = 8
-                    else:
-                        break
-
             in_section = False
             mon_info_list.append(mon_info)
             mon_info = dict()
-            modes = list()
-            native_mode = ""
             continue
 
         if not in_section:
             #The card and output port
             mon_info["Connector"] = out[0]
         else:
-            if out[0] == "ModelName":
-                mon_info["Model"] = " ".join(out[1:]).strip('"')
-            elif out[0] == "VendorName":
-                mon_info["Vendor"] = " ".join(out[1:]).strip('"')
-            elif out[0] == "Modeline":
-                modes.append( " ".join(out[1:]) )
-            elif out[0] == "Option" and out[1] == '"PreferredMode"':
-                native_mode = " ".join(out[2:])
-            elif out[0] == "VertRefresh":
-                mon_info["Refresh Rate"] = out[1]
-            elif out[0] == "DisplaySize":
-                v_size = int(out[1])
-                h_size = int(out[2])
-                inch = math.sqrt(v_size ** 2 + h_size ** 2) / 25.4
-                mon_info["Display Dimentions (mm)"] = [v_size, h_size]
+            if out[0] == "Display Product Name":
+                mon_info["Model"] = out[1][1:].strip("'")
+            elif out[0] == "Manufacturer":
+                mon_info["Vendor"] = out[1][1:]
+            elif out[0] == "Native Video Resolution":
+                mon_info["Native Resolution"] = out[1][1:]
+            elif out[0] == "Monitor ranges (Bare Limits)":
+                mon_info["Refresh Rate"] = out[1].split()[0] + " Hz"
+            elif out[0] == "Maximum image size":
+                # Assuming that this is always in centimeters
+                temp = out[1].split("x")
+                v_size = int(temp[0].split()[0])
+                h_size = int(temp[1].split()[0])
+                inch = math.sqrt(v_size ** 2 + h_size ** 2) / 2.54
+                mon_info["Display Dimentions (cm)"] = [v_size, h_size]
                 mon_info["Display Size (inch)"] = inch
-            elif "Monitor Manufactured" in line:
-                mon_info["Manufacture date"] = line[24:-1]
-            elif "Serial Number" in line:
-                mon_info["Serial Number"] = line[17:-1].strip('"')
+            elif out[0] == "Made in":
+                mon_info["Manufacture date"] = out[1][1:]
+            elif out[0] == "Display Product Serial Number":
+                mon_info["Serial Number"] = out[1][1:].strip("'")
+            elif out[0] == "Bits per primary color channel":
+                mon_info["Color depth"] = out[1][1:]
+            elif out[0] == "Supported color formats":
+                out = line[25:].strip()
+                mon_info["Color formats"] = out.split(", ")
 
     if in_section:
         #Something is wrong, this shouldn't happen
